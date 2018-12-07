@@ -3,7 +3,7 @@
 
 // +build !appengine
 
-package protofile // import "blitznote.com/src/caddy.upload/protofile"
+package protofile // import "blitznote.com/src/protofile"
 
 import (
 	"syscall"

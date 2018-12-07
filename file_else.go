@@ -3,7 +3,7 @@
 
 // +build !linux
 
-package protofile // import "blitznote.com/src/caddy.upload/protofile"
+package protofile // import "blitznote.com/src/protofile"
 import "os"
 
 // Call this to discard the file.
