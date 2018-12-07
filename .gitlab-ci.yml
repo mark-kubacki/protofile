@@ -26,7 +26,9 @@ cache:dependencies:
       dep ensure;
       dep status;
     fi
+  - cd "$CI_PROJECT_DIR"
   - go get -v -t
+  - cd "$GODIR"
   cache:
     key: "$CI_PROJECT_NAME-$CI_COMMIT_REF_NAME"
     policy: pull-push
