@@ -51,6 +51,7 @@ vet:
   stage: test
   <<: *get_dependencies
   script:
+  - rm /var/go/theirs/src && mv vendor /var/go/theirs/src
   - diff <(echo -n) <(gofmt -s -d $(find . -type f -name '*.go' -not -path "./_*"))
   - go vet ./...
 
