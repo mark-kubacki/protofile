@@ -1,0 +1,54 @@
+tags: ['golang']
+substitutions:
+  _PROJECT_ROOT: 'blitznote.com/src/protofile'
+
+# Google's default image lacks some tools I frequently use.
+# Therefore steps don't start like this:
+#  name: 'gcr.io/cloud-builders/go'
+#  env: ['PROJECT_ROOT=${_PROJECT_ROOT}']
+
+steps:
+- name: 'gcr.io/cloud-builders/go:debian'
+  id: 'gofmt'
+  entrypoint: 'bash'
+  args: ['-c', 'diff <(echo -n) <(gofmt -s -d $(find . -type f -name "*.go" -not -path "./_*"))']
+
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['pull', 'blitznote/golang']
+
+- &use_go
+  name: 'blitznote/golang'
+  volumes:
+  - name: 'third-party-sources'
+    path: '/var/go/theirs'
+  env: ['GOPATH=/var/go/theirs:/go:/usr/share/gocode']
+  dir: '/go/src/${_PROJECT_ROOT}'
+  id: 'get dependencies'
+  args: ['go', 'get', '-d', '-t', './...']
+
+- <<: *use_go
+  id: 'vet'
+  waitFor: ['get dependencies']
+  args: ['go', 'vet', './...']
+- <<: *use_go
+  id: 'ineffassign'
+  waitFor: ['get dependencies']
+  args: ['ineffassign', '.']
+- <<: *use_go
+  id: 'lint'
+  waitFor: ['get dependencies']
+  args: ['golint', './...']
+- <<: *use_go
+  id: 'unittests'
+  waitFor: ['get dependencies']
+  args: ['go', 'test', '-v', './...']
+
+- &build_go
+  <<: *use_go
+  waitFor: ['get dependencies', 'gofmt', 'vet', 'ineffassign', 'lint', 'unittests']
+  id: 'build linux amd64'
+  env: ['GOPATH=/var/go/theirs:/go:/usr/share/gocode', 'GOARCH=amd64', 'GOOS=linux']
+  args: ['go', 'build', '.', 'errors']
+- <<: *build_go
+  id: 'build windows amd64'
+  env: ['GOPATH=/var/go/theirs:/go:/usr/share/gocode', 'GOARCH=amd64', 'GOOS=windows']
