@@ -1,54 +1,46 @@
 tags: ['golang']
-substitutions:
-  _PROJECT_ROOT: 'blitznote.com/src/protofile'
-
-# Google's default image lacks some tools I frequently use.
-# Therefore steps don't start like this:
-#  name: 'gcr.io/cloud-builders/go'
-#  env: ['PROJECT_ROOT=${_PROJECT_ROOT}']
 
 steps:
-- name: 'gcr.io/cloud-builders/go:debian'
+- name: 'golang'
   id: 'gofmt'
   entrypoint: 'bash'
   args: ['-c', 'diff <(echo -n) <(gofmt -s -d $(find . -type f -name "*.go" -not -path "./_*"))']
 
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['pull', 'blitznote/golang']
+- name: 'gcr.io/blitznote/golang/ineffassign'
+  id: 'ineffassign'
+  waitFor: ['gofmt']
+  args: ['.']
+- name: 'gcr.io/blitznote/golang/golint'
+  id: 'lint'
+  waitFor: ['gofmt']
 
 - &use_go
-  name: 'blitznote/golang'
+  name: 'golang'
   volumes:
-  - name: 'third-party-sources'
-    path: '/var/go/theirs'
-  env: ['GOPATH=/var/go/theirs:/go:/usr/share/gocode']
-  dir: '/go/src/${_PROJECT_ROOT}'
+  - name: 'go-modules'
+    path: '/go'
+  env: ['GOPATH=/go:/usr/share/gocode', 'GO111MODULE=on']
   id: 'get dependencies'
-  args: ['go', 'get', '-d', '-t', './...']
+  entrypoint: '/usr/local/go/bin/go'
+  args: ['mod', 'download']
 
 - <<: *use_go
   id: 'vet'
   waitFor: ['get dependencies']
-  args: ['go', 'vet', './...']
-- <<: *use_go
-  id: 'ineffassign'
-  waitFor: ['get dependencies']
-  args: ['ineffassign', '.']
-- <<: *use_go
-  id: 'lint'
-  waitFor: ['get dependencies']
-  args: ['golint', './...']
+  env: ['GOPATH=/go:/usr/share/gocode', 'GO111MODULE=on', 'GOPROXY=off']
+  args: ['vet', './...']
 - <<: *use_go
   id: 'unittests'
   waitFor: ['get dependencies']
-  args: ['go', 'test', '-v', './...']
+  env: ['GOPATH=/go:/usr/share/gocode', 'GO111MODULE=on', 'GOPROXY=off']
+  args: ['test', '-v', './...']
 
 - &build_go
   <<: *use_go
-  waitFor: ['get dependencies', 'gofmt', 'vet', 'ineffassign', 'lint', 'unittests']
+  waitFor: ['get dependencies', 'vet', 'unittests']
   id: 'build linux amd64'
-  env: ['GOPATH=/var/go/theirs:/go:/usr/share/gocode', 'GOARCH=amd64', 'GOOS=linux']
-  args: ['go', 'build', '.', 'errors']
+  env: ['GOPATH=/go:/usr/share/gocode', 'GO111MODULE=on', 'GOPROXY=off', 'GOARCH=amd64', 'GOOS=linux']
+  args: ['build', '.', 'errors']
 - <<: *build_go
   id: 'build windows amd64'
-  env: ['GOPATH=/var/go/theirs:/go:/usr/share/gocode', 'GOARCH=amd64', 'GOOS=windows']
+  env: ['GOPATH=/go:/usr/share/gocode', 'GO111MODULE=on', 'GOPROXY=off', 'GOARCH=amd64', 'GOOS=windows']
