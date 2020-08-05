@@ -55,6 +55,7 @@ func TestGeneralizedProtoFile(t *testing.T) {
 		Convey("the file is not in visible namespace until persisted", func() {
 			filename := tempFileName()
 			fp, err := intentNewUniversal(scratchDir, filename)
+			So(err, ShouldBeNil)
 			defer func() {
 				os.Remove(filepath.Join(scratchDir, filename))
 			}()
@@ -74,6 +75,7 @@ func TestGeneralizedProtoFile(t *testing.T) {
 			So(os.IsNotExist(err), ShouldBeTrue)
 
 			err = f.Persist()
+			So(err, ShouldBeNil)
 			_, err = os.Stat(filepath.Join(scratchDir, filename))
 			So(os.IsNotExist(err), ShouldBeFalse)
 		})
@@ -81,6 +83,7 @@ func TestGeneralizedProtoFile(t *testing.T) {
 		Convey("the file will not materialize after having been zapped", func() {
 			filename := tempFileName()
 			fp, err := intentNewUniversal(scratchDir, filename)
+			So(err, ShouldBeNil)
 			defer func() {
 				os.Remove(filepath.Join(scratchDir, filename))
 			}()
@@ -96,6 +99,7 @@ func TestGeneralizedProtoFile(t *testing.T) {
 			io.Copy(f, strings.NewReader("DELME"))
 
 			err = f.Zap()
+			So(err, ShouldBeNil)
 			_, err = os.Stat(filepath.Join(scratchDir, filename))
 			So(os.IsNotExist(err), ShouldBeTrue)
 		})
