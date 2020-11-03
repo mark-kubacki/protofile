@@ -1,7 +1,30 @@
 tags: ['golang']
+options:
+  env:
+  - 'GOMODCACHE=/var/lib/go'
+  - 'GOCACHE=/var/cache/go'
+  - 'PROJECT_ID=${PROJECT_ID}'
+  - 'REPO_NAME=${REPO_NAME}'
+  volumes:
+  - name: 'GOMODCACHE'
+    path: '/var/lib/go'
+  - name: 'GOCACHE'
+    path: '/var/cache/go'
 
 steps:
-- name: 'golang'
+- name: 'gcr.io/cloud-builders/docker'
+  id: 'get golang'
+  waitFor: ['-']
+  entrypoint: 'bash'
+  args:
+  - -c
+  - |
+    set -ex
+    if ! docker tag golang:cloudbuild_cache localhost/golang:latest; then
+      docker pull mirror.gcr.io/library/golang:latest
+      docker tag {mirror.gcr.io/library,localhost}/golang:latest
+    fi
+- name: 'localhost/golang'
   id: 'gofmt'
   entrypoint: 'bash'
   args: ['-c', 'diff <(echo -n) <(gofmt -s -d $(find . -type f -name "*.go" -not -path "./_*"))']
@@ -13,34 +36,50 @@ steps:
 - name: 'gcr.io/blitznote/golang/golint'
   id: 'lint'
   waitFor: ['gofmt']
+- name: 'gcr.io/blitznote/cacheutil'
+  id: 'restore cached var-lib-go'
+  waitFor: ['gofmt', 'ineffassign', 'lint']
+  args: ['restore', '/var/lib/go']
+- name: 'gcr.io/blitznote/cacheutil'
+  id: 'restore cached var-cache-go'
+  waitFor: ['gofmt', 'ineffassign', 'lint']
+  args: ['restore', '/var/cache/go']
 
 - &use_go
-  name: 'golang'
+  name: 'localhost/golang'
   volumes:
-  - name: 'go-modules'
-    path: '/go'
-  env: ['GOPATH=/go:/usr/share/gocode', 'GO111MODULE=on']
+  - name: 'tmpfs'
+    path: '/tmp'
   id: 'get dependencies'
-  entrypoint: '/usr/local/go/bin/go'
+  entrypoint: 'go'
   args: ['mod', 'download']
 
 - <<: *use_go
   id: 'vet'
   waitFor: ['get dependencies']
-  env: ['GOPATH=/go:/usr/share/gocode', 'GO111MODULE=on', 'GOPROXY=off']
+  env: ['GOPROXY=off']
   args: ['vet', './...']
 - <<: *use_go
   id: 'unittests'
   waitFor: ['get dependencies']
-  env: ['GOPATH=/go:/usr/share/gocode', 'GO111MODULE=on', 'GOPROXY=off']
+  env: ['GOPROXY=off']
   args: ['test', '-v', './...']
 
 - &build_go
   <<: *use_go
   waitFor: ['get dependencies', 'vet', 'unittests']
   id: 'build linux amd64'
-  env: ['GOPATH=/go:/usr/share/gocode', 'GO111MODULE=on', 'GOPROXY=off', 'GOARCH=amd64', 'GOOS=linux']
-  args: ['build', '.', 'errors']
+  env: ['GOPROXY=off', 'GOARCH=amd64', 'GOOS=linux']
+  args: ['build', '-mod=readonly', '.', 'errors']
 - <<: *build_go
   id: 'build windows amd64'
-  env: ['GOPATH=/go:/usr/share/gocode', 'GO111MODULE=on', 'GOPROXY=off', 'GOARCH=amd64', 'GOOS=windows']
+  env: ['GOPROXY=off', 'GOARCH=amd64', 'GOOS=windows']
+
+- name: 'gcr.io/blitznote/cacheutil'
+  id: 'stash cached var-lib-go'
+  waitFor: ['get dependencies']
+  args: ['stash', '/var/lib/go']
+- name: 'gcr.io/blitznote/cacheutil'
+  id: 'stash cached var-cache-go'
+  waitFor: ['build linux amd64', 'build windows amd64']
+  args: ['stash', '/var/cache/go']
