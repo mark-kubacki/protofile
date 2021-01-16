@@ -8,6 +8,8 @@ package protofile // import "blitznote.com/src/protofile"
 import (
 	"os"
 	"syscall"
+
+	"golang.org/x/sys/unix"
 )
 
 // Is used with Linux if O_TMPFILE didn't work.
@@ -33,7 +35,7 @@ func intentNewUnixDotted(path, filename string) (*ProtoFileBehaver, error) {
 	}
 	g := (*orig).(generalizedProtoFile)
 
-	fcntl(g.File.Fd(), syscall.F_SETLEASE, syscall.F_WRLCK) // WRLCK includes RDLCK
+	unix.FcntlInt(g.File.Fd(), syscall.F_SETLEASE, syscall.F_WRLCK) // WRLCK includes RDLCK
 	// An error is not expected because we created that file, with a random name;
 	// - either the kernel does not support locking at all and the error can be ignored anyway
 	// - or anything malevolent is locking our file.
@@ -48,7 +50,7 @@ func (p unixDottedProtoFile) Zap() error {
 	if p.persisted {
 		return nil
 	}
-	fcntl(p.File.Fd(), syscall.F_SETLEASE, syscall.F_UNLCK)
+	unix.FcntlInt(p.File.Fd(), syscall.F_SETLEASE, syscall.F_UNLCK)
 	return p.generalizedProtoFile.Zap()
 }
 
@@ -64,7 +66,7 @@ func (p unixDottedProtoFile) Persist() error {
 	}
 	p.persisted = true
 
-	fcntl(p.File.Fd(), syscall.F_SETLEASE, syscall.F_UNLCK)
+	unix.FcntlInt(p.File.Fd(), syscall.F_SETLEASE, syscall.F_UNLCK)
 
 	return p.File.Close()
 }

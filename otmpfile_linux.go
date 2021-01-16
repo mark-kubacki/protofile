@@ -67,15 +67,14 @@ func (p unixProtoFile) Persist() error {
 		return err
 	}
 
-	fd := p.File.Fd()
-	oldpath := "/proc/self/fd/" + uitoa(uint(fd)) // always ≥0 (often ≥4)
-	// As of Go 1.6 it is not possible to call Linkat with a FD only. This is a workaround.
-	err = linkat(fd, oldpath, unix.AT_FDCWD, p.finalName, unix.AT_SYMLINK_FOLLOW)
+	fd := int(p.File.Fd())
+	oldpath := "/proc/self/fd/" + uitoa(uint(fd))
+	err = unix.Linkat(fd, oldpath, unix.AT_FDCWD, p.finalName, unix.AT_SYMLINK_FOLLOW)
 	if os.IsExist(err) { // Someone claimed our name!
 		finfo, err2 := os.Stat(p.finalName)
 		if err2 == nil && !finfo.IsDir() {
 			os.Remove(p.finalName) // To emulate the behaviour of Create we will "overwrite" the other file.
-			err = linkat(fd, oldpath, unix.AT_FDCWD, p.finalName, unix.AT_SYMLINK_FOLLOW)
+			err = unix.Linkat(fd, oldpath, unix.AT_FDCWD, p.finalName, unix.AT_SYMLINK_FOLLOW)
 		}
 	}
 	// 'linkat' catches many of the errors 'os.Create' would throw,
@@ -123,4 +122,17 @@ func (p unixProtoFile) SizeWillBe(numBytes uint64) error {
 	_ = unix.Fadvise(fd, 0, maxInt64, unix.FADV_WILLNEED)
 	_ = unix.Fadvise(fd, 0, maxInt64, unix.FADV_SEQUENTIAL)
 	return err
+}
+
+// Here to avoid importing "fmt".
+func uitoa(val uint) string {
+	var buf [32]byte // big enough for int64
+	i := len(buf) - 1
+	for val >= 10 {
+		buf[i] = byte(val%10 + '0')
+		i--
+		val /= 10
+	}
+	buf[i] = byte(val + '0')
+	return string(buf[i:])
 }
