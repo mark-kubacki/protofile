@@ -28,22 +28,21 @@ type unixDottedProtoFile struct {
 // A different process watching file (creation) events would ideally
 // 'open' with O_NONBLOCK and notice its mistake (if it opened it prematuerly)
 // by getting a EWOULDBLOCK due to the lease.
-func intentNewUnixDotted(path, filename string) (*ProtoFileBehaver, error) {
+func intentNewUnixDotted(path, filename string) (ProtoFileBehaver, error) {
 	orig, err := intentNewUniversal(path, filename)
 	if err != nil {
-		return orig, err
+		return nil, err
 	}
-	g := (*orig).(generalizedProtoFile)
+	g := orig.(generalizedProtoFile)
 
 	unix.FcntlInt(g.File.Fd(), syscall.F_SETLEASE, syscall.F_WRLCK) // WRLCK includes RDLCK
 	// An error is not expected because we created that file, with a random name;
 	// - either the kernel does not support locking at all and the error can be ignored anyway
 	// - or anything malevolent is locking our file.
 
-	n := ProtoFileBehaver(unixDottedProtoFile{
+	return &unixDottedProtoFile{
 		generalizedProtoFile: g,
-	})
-	return &n, err
+	}, nil
 }
 
 func (p unixDottedProtoFile) Zap() error {

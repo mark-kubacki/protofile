@@ -30,19 +30,17 @@ func TestGeneralizedProtoFile(t *testing.T) {
 	Convey("GeneralizedProtoFile", t, func() {
 		Convey("creates a new file", func() {
 			filename := tempFileName()
-			fp, err := intentNewUniversal(scratchDir, filename)
+			f, err := intentNewUniversal(scratchDir, filename)
+			So(err, ShouldBeNil)
+			if err != nil {
+				return
+			}
 			defer func() {
 				os.Remove(filepath.Join(scratchDir, filename))
 			}()
 			defer func() {
 				os.Remove(filepath.Join(scratchDir, "."+filename))
 			}()
-			So(err, ShouldBeNil)
-			So(fp, ShouldNotBeNil)
-			if fp == nil {
-				return
-			}
-			f := *fp
 
 			n, err := io.Copy(f, strings.NewReader("DELME"))
 			So(err, ShouldBeNil)
@@ -54,19 +52,17 @@ func TestGeneralizedProtoFile(t *testing.T) {
 
 		Convey("the file is not in visible namespace until persisted", func() {
 			filename := tempFileName()
-			fp, err := intentNewUniversal(scratchDir, filename)
+			f, err := intentNewUniversal(scratchDir, filename)
 			So(err, ShouldBeNil)
+			if err != nil {
+				return
+			}
 			defer func() {
 				os.Remove(filepath.Join(scratchDir, filename))
 			}()
 			defer func() {
 				os.Remove(filepath.Join(scratchDir, "."+filename))
 			}()
-			if fp == nil {
-				So(fp, ShouldNotBeNil)
-				return
-			}
-			f := *fp
 
 			_, err = os.Stat(filepath.Join(scratchDir, filename))
 			So(os.IsNotExist(err), ShouldBeTrue)
@@ -82,19 +78,17 @@ func TestGeneralizedProtoFile(t *testing.T) {
 
 		Convey("the file will not materialize after having been zapped", func() {
 			filename := tempFileName()
-			fp, err := intentNewUniversal(scratchDir, filename)
+			f, err := intentNewUniversal(scratchDir, filename)
 			So(err, ShouldBeNil)
+			if err != nil {
+				return
+			}
 			defer func() {
 				os.Remove(filepath.Join(scratchDir, filename))
 			}()
 			defer func() {
 				os.Remove(filepath.Join(scratchDir, "."+filename))
 			}()
-			if fp == nil {
-				So(fp, ShouldNotBeNil)
-				return
-			}
-			f := *fp
 
 			io.Copy(f, strings.NewReader("DELME"))
 

@@ -50,11 +50,11 @@ type ProtoFile struct {
 }
 
 // IntentNew "creates" a file which, ideally, is nameless at that point.
-var IntentNew func(path, filename string) (*ProtoFileBehaver, error) = intentNewUniversal
+var IntentNew func(path, filename string) (ProtoFileBehaver, error) = intentNewUniversal
 
 type generalizedProtoFile ProtoFile
 
-func intentNewUniversal(path, filename string) (*ProtoFileBehaver, error) {
+func intentNewUniversal(path, filename string) (ProtoFileBehaver, error) {
 	err := os.MkdirAll(path, permBitsDir)
 	if err != nil {
 		return nil, err
@@ -63,9 +63,8 @@ func intentNewUniversal(path, filename string) (*ProtoFileBehaver, error) {
 	if err != nil {
 		return nil, err
 	}
-	g := ProtoFileBehaver(generalizedProtoFile{
+	return &generalizedProtoFile{
 		File:      t,
 		finalName: path + "/" + filename,
-	})
-	return &g, nil
+	}, nil
 }

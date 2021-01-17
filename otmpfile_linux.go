@@ -22,7 +22,7 @@ func init() {
 // The file gets discarded by the OS should it remain without a name but get closed.
 type unixProtoFile ProtoFile
 
-func intentNewUnix(path, filename string) (*ProtoFileBehaver, error) {
+func intentNewUnix(path, filename string) (ProtoFileBehaver, error) {
 	err := os.MkdirAll(path, permBitsDir)
 	if err != nil {
 		return nil, err
@@ -45,11 +45,11 @@ func intentNewUnix(path, filename string) (*ProtoFileBehaver, error) {
 			return nil, err
 		}
 	}
-	g := ProtoFileBehaver(unixProtoFile{
+
+	return &unixProtoFile{
 		File:      t,
 		finalName: path + "/" + filename,
-	})
-	return &g, nil
+	}, nil
 }
 
 func (p unixProtoFile) Zap() error {
