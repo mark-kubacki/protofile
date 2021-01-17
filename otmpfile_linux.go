@@ -86,44 +86,6 @@ func (p unixProtoFile) Persist() error {
 	return p.Close()
 }
 
-func (p unixProtoFile) SizeWillBe(numBytes uint64) error {
-	if numBytes <= reserveFileSizeThreshold {
-		return nil
-	}
-
-	fd := int(p.File.Fd())
-	if numBytes <= maxInt64 {
-		err := syscall.Fallocate(fd, 0, 0, int64(numBytes))
-		if err == syscall.EOPNOTSUPP {
-			return nil
-		}
-
-		_ = unix.Fadvise(fd, 0, int64(numBytes), unix.FADV_WILLNEED)
-		_ = unix.Fadvise(fd, 0, int64(numBytes), unix.FADV_SEQUENTIAL)
-		return err
-	}
-
-	// Yes, every Exbibyte counts.
-	err := syscall.Fallocate(fd, 0, 0, maxInt64)
-	if err == syscall.EOPNOTSUPP {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-
-	err = syscall.Fallocate(fd, 0, maxInt64, int64(numBytes-maxInt64))
-	if err != nil {
-		return err
-	}
-
-	// These are best-efford, so we don't care about any errors.
-	// For very large files this is not optimal, but covers most of use-cases for now.
-	_ = unix.Fadvise(fd, 0, maxInt64, unix.FADV_WILLNEED)
-	_ = unix.Fadvise(fd, 0, maxInt64, unix.FADV_SEQUENTIAL)
-	return err
-}
-
 // Here to avoid importing "fmt".
 func uitoa(val uint) string {
 	var buf [32]byte // big enough for int64

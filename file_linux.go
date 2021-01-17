@@ -5,7 +5,6 @@ package protofile // import "blitznote.com/src/protofile"
 
 import (
 	"os"
-	"syscall"
 )
 
 // Call this to discard the file.
@@ -31,30 +30,4 @@ func (p generalizedProtoFile) Persist() error {
 	}
 	p.persisted = true
 	return p.File.Close()
-}
-
-// Asks the filesystem to reserve some space for this file's contents.
-// This could result in a sparse file (if you wrote less than anticipated)
-// or shrink the file.
-func (p generalizedProtoFile) SizeWillBe(numBytes uint64) error {
-	if numBytes <= reserveFileSizeThreshold {
-		return nil
-	}
-
-	fd := int(p.File.Fd())
-	if numBytes <= maxInt64 {
-		err := syscall.Fallocate(fd, 0, 0, int64(numBytes))
-		if err == syscall.EOPNOTSUPP {
-			return nil
-		}
-		return err
-	}
-	err := syscall.Fallocate(fd, 0, 0, maxInt64)
-	if err == syscall.EOPNOTSUPP {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	return syscall.Fallocate(fd, 0, maxInt64, int64(numBytes-maxInt64))
 }

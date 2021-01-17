@@ -10,13 +10,6 @@ import (
 )
 
 const (
-	// If a file is expected to be smaller than this (in bytes)
-	// then skip reserving space for it in advance.
-	reserveFileSizeThreshold = 1 << 15
-
-	// Defined here to avoid the import of "math", and needed in file allocation functions.
-	maxInt64 = 1<<63 - 1
-
 	// Following bitmasks, traditionally denoted in octal, represent the values hard-coded in Golang
 	// that are used by default for creating files and directories. The 'umask' is always applied implicitly.
 	permBitsDir  = os.ModePerm                      // -rwxrwxrwx
@@ -34,10 +27,7 @@ type ProtoFileBehaver interface {
 	// This closes the file.
 	Persist() error
 
-	// Reserves space on disk by writelessly inflating the (then empty) file.
-	SizeWillBe(numBytes uint64) error
-
-	io.Writer
+	io.WriteCloser
 }
 
 // ProtoFile represents a file that can be discarded or named after having been written.

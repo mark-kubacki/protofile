@@ -35,18 +35,3 @@ func (p generalizedProtoFile) Persist() error {
 	p.persisted = true
 	return nil
 }
-
-// Asks the filesystem to reserve some space for this file's contents.
-// This could result in a sparse file (if you wrote less than anticipated)
-// or truncate it.
-func (p generalizedProtoFile) SizeWillBe(numBytes uint64) error {
-	if numBytes <= reserveFileSizeThreshold {
-		return nil
-	}
-
-	if numBytes <= maxInt64 {
-		return p.Truncate(int64(numBytes))
-	}
-	// allocate as much as possible
-	return p.Truncate(maxInt64)
-}
