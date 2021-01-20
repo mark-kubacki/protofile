@@ -1,4 +1,4 @@
-module blitznote.com/src/protofile
+module blitznote.com/src/protofile/v2
 
 go 1.16
 
